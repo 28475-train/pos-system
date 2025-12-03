@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>会員管理</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+<script src="app.js"></script>
+<script src="admin.js"></script>
+
+<style>
+.list-item {
+    padding:10px;
+    border-bottom:1px solid #ddd;
+    display:flex;
+    justify-content:space-between;
+}
+input { padding:8px; width:200px; }
+button { padding:8px 15px; }
+</style>
+</head>
+
+<body>
+
+<h1>会員管理</h1>
+
+<button onclick="openBarcodeReader()">バーコード読み取り</button>
+
+<div id="scanArea" style="display:none;">
+    <video id="camera" width="300" height="200" autoplay></video>
+    <p id="scanResult"></p>
+    <button onclick="closeBarcodeReader()">閉じる</button>
+</div>
+
+<h3>会員追加</h3>
+名前：<input id="newName"><br><br>
+<button onclick="addMember()">追加</button>
+
+<h2>会員一覧</h2>
+<div id="memberList"></div>
+
+<script>
+let codeReader;
+function loadMembers() {
+    fetch(API + "?mode=getMembers")
+        .then(r => r.json())
+        .then(list => {
+            let html = "";
+            list.forEach(m => {
+                html += `
+                <div class="list-item">
+                    <span>${m.id}：${m.name}（P:${m.point}）</span>
+                    <div>
+                        <button onclick="delMember('${m.id}')">削除</button>
+                    </div>
+                </div>
+                `;
+            });
+            document.getElementById("memberList").innerHTML = html;
+        });
+}
+loadMembers();
+
+function addMember() {
+    const name = document.getElementById("newName").value;
+    if (!name) return;
+
+    fetch(API, {
+        method:"POST",
+        body:JSON.stringify({ mode:"addMember", name:name })
+    })
+    .then(r => r.text())
+    .then(() => {
+        alert("追加しました");
+        loadMembers();
+    });
+}
+
+function delMember(id) {
+    if (!confirm("削除しますか？")) return;
+
+    fetch(API + "?mode=deleteMember&id=" + id)
+        .then(r => r.text())
+        .then(() => loadMembers());
+}
+
+
+// ◆ バーコード読み取り
+function openBarcodeReader() {
+    document.getElementById("scanArea").style.display="block";
+    codeReader = new ZXing.BrowserMultiFormatReader();
+    codeReader.listVideoInputDevices().then(devices=>{
+        const id = devices[0].deviceId;
+        codeReader.decodeFromVideoDevice(id,'camera',(res,err)=>{
+            if(res){
+                document.getElementById("scanResult").textContent="読み取り："+res.text;
+                loadMemberOne(res.text);
+                closeBarcodeReader();
+            }
+        });
+    });
+}
+function closeBarcodeReader(){
+    document.getElementById("scanArea").style.display="none";
+    if(codeReader) codeReader.reset();
+}
+
+function loadMemberOne(id){
+    fetch(API+"?mode=getMember&id="+id)
+        .then(r=>r.json())
+        .then(m=>{
+            if(m.error){ alert("会員なし"); return; }
+            alert("ID:"+m.id+"\n名前:"+m.name+"\nP:"+m.point);
+        });
+}
+
+</script>
+
+</body>
+</html>
