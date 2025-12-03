@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>注文管理</title>
+<link rel="stylesheet" href="style.css">
+<script src="app.js"></script>
+<script src="admin.js"></script>
+
+<style>
+.list-item {
+    padding:10px;
+    border-bottom:1px solid #ddd;
+}
+</style>
+</head>
+
+<body>
+
+<h1>注文管理</h1>
+
+<div id="orderList"></div>
+
+<script>
+function loadOrders(){
+    fetch(API + "?mode=getOrders")
+        .then(r=>r.json())
+        .then(list=>{
+            let html="";
+            list.forEach(o=>{
+                html += `
+                <div class="list-item">
+                    注文ID: ${o.id}<br>
+                    会員: ${o.member}<br>
+                    合計: ${o.total}円<br>
+                    <button onclick="viewDetail('${o.id}')">詳細</button>
+                </div>
+                `;
+            });
+            document.getElementById("orderList").innerHTML = html;
+        });
+}
+loadOrders();
+
+function viewDetail(id){
+    fetch(API + "?mode=getOrder&id=" + id)
+        .then(r=>r.json())
+        .then(data=>{
+            let msg = "注文ID:"+id+"\n\n";
+            data.items.forEach(i=>{
+                msg += `${i.name} ${i.price}円\n`;
+            });
+            alert(msg);
+        });
+}
+</script>
+
+</body>
+</html>
