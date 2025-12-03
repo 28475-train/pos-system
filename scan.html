@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>会員バーコード読み取り</title>
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+<style>
+body { font-family: sans-serif; text-align: center; padding: 20px; }
+#camera { width: 90%; max-width: 350px; }
+</style>
+</head>
+<body>
+
+<h2>会員バーコード読み取り</h2>
+
+<video id="camera" autoplay></video>
+<p id="result"></p>
+
+<button onclick="location.href='index.html'">POSに戻る</button>
+
+<script>
+let reader = new ZXing.BrowserMultiFormatReader();
+
+reader.listVideoInputDevices().then(devices => {
+    const camera = devices[0].deviceId;
+
+    reader.decodeFromVideoDevice(camera, "camera", (result, err) => {
+        if (result) {
+            document.getElementById("result").textContent =
+                "会員ID: " + result.text;
+
+            // POS画面へ値を渡す（ローカルストレージ）
+            localStorage.setItem("member_id", result.text);
+
+            // 自動遷移
+            setTimeout(() => {
+                location.href = "index.html";
+            }, 1000);
+        }
+    });
+});
+</script>
+
+</body>
+</html>
