@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>POSレジ</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+<header>
+  <h1>POS レジ</h1>
+  <a href="admin.html">管理画面</a>
+</header>
+
+<section>
+  <h2>商品一覧</h2>
+  <div id="productList"></div>
+</section>
+
+<section>
+  <h2>カート</h2>
+  <div id="cartList"></div>
+  <p>合計: <span id="total">0</span> 円</p>
+</section>
+
+<section>
+  <h2>会員検索</h2>
+  <input id="searchPhone" placeholder="電話番号">
+  <button onclick="searchMember()">検索</button>
+  <div id="memberInfo"></div>
+</section>
+
+<section>
+  <h2>ポイント使用</h2>
+  <input id="usePoint" placeholder="使用ポイント">
+</section>
+
+<section>
+  <h2>支払い</h2>
+  <button onclick="payCash()">現金で支払い</button>
+  <button onclick="payQR()">QR決済</button>
+</section>
+
+</body>
+</html>
