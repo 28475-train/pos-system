@@ -1,45 +1,220 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>POSレジ</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="app.js" defer></script>
+<meta charset="UTF-8">
+<title>POS（顧客側）</title>
+<link rel="stylesheet" href="style.css">
+
+<!-- ZXing 読取 -->
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+
+<!-- JsBarcode（会員カードで使うが一応読み込み） -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+<!-- 共通処理 -->
+<script src="app.js"></script>
+<script src="barcode.js"></script>
+
+<style>
+body { padding:20px; }
+.member-box, .cart-box { margin:20px 0; padding:15px; border:1px solid #ccc; border-radius:8px;}
+button { padding:10px 18px; border-radius:6px; border:none; font-size:16px; }
+.item { border-bottom:1px solid #ddd; padding:8px 0; display:flex; justify-content:space-between; }
+</style>
 </head>
+
 <body>
-<header>
-  <h1>POS レジ</h1>
-  <a href="admin.html">管理画面</a>
-</header>
 
-<section>
-  <h2>商品一覧</h2>
-  <div id="productList"></div>
-</section>
+<h1>POS システム</h1>
 
-<section>
-  <h2>カート</h2>
-  <div id="cartList"></div>
-  <p>合計: <span id="total">0</span> 円</p>
-</section>
+<!-- 会員情報 -->
+<div class="member-box">
+    <h2>会員</h2>
 
-<section>
-  <h2>会員検索</h2>
-  <input id="searchPhone" placeholder="電話番号">
-  <button onclick="searchMember()">検索</button>
-  <div id="memberInfo"></div>
-</section>
+    <button onclick="openBarcodeReader()">会員バーコード読み取り</button>
+    <button onclick="clearMember()">会員解除</button>
 
-<section>
-  <h2>ポイント使用</h2>
-  <input id="usePoint" placeholder="使用ポイント">
-</section>
+    <div id="memberInfo" style="margin-top:15px; display:none;">
+        <p>会員ID：<span id="m_id"></span></p>
+        <p>名前：<span id="m_name"></span></p>
+        <p>ポイント：<span id="m_point"></span></p>
+    </div>
+</div>
 
-<section>
-  <h2>支払い</h2>
-  <button onclick="payCash()">現金で支払い</button>
-  <button onclick="payQR()">QR決済</button>
-</section>
+<!-- バーコード読取エリア -->
+<div id="scanArea" style="display:none; margin-top:20px;">
+    <h3>バーコード読取中</h3>
+    <video id="camera" width="300" height="200" autoplay></video>
+    <p id="scanResult"></p>
+    <button onclick="closeBarcodeReader()">閉じる</button>
+</div>
+
+
+<!-- 商品カート -->
+<div class="cart-box">
+    <h2>商品</h2>
+
+    <div style="margin-bottom:10px;">
+        <input type="text" id="productCode" placeholder="商品コード入力">
+        <button onclick="addProductFromInput()">追加</button>
+    </div>
+
+    <div id="cartList"></div>
+
+    <h3>合計：<span id="totalPrice">0</span> 円</h3>
+</div>
+
+<button onclick="checkout()">会計へ</button>
+
+<script>
+// ------------------------------------------------------------
+// グローバル
+// ------------------------------------------------------------
+let member = null;
+let cart = [];
+let codeReader;
+
+
+// ------------------------------------------------------------
+// 会員バーコード読取
+// ------------------------------------------------------------
+function openBarcodeReader() {
+    document.getElementById("scanArea").style.display = "block";
+
+    codeReader = new ZXing.BrowserMultiFormatReader();
+    codeReader.listVideoInputDevices().then(devices => {
+        const deviceId = devices[0].deviceId;
+        codeReader.decodeFromVideoDevice(deviceId, 'camera', (result, err) => {
+            if (result) {
+                document.getElementById("scanResult").textContent = "読み取り：" + result.text;
+                fetchMember(result.text);
+                closeBarcodeReader();
+            }
+        });
+    });
+}
+
+function closeBarcodeReader() {
+    document.getElementById("scanArea").style.display = "none";
+    if (codeReader) codeReader.reset();
+}
+
+
+// ------------------------------------------------------------
+// 会員データ取得
+// ------------------------------------------------------------
+function fetchMember(id) {
+    fetch(API + "?mode=getMember&id=" + id)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                alert("会員が見つかりません");
+                return;
+            }
+
+            member = data;
+            showMember();
+        });
+}
+
+function showMember() {
+    if (!member) return;
+    document.getElementById("memberInfo").style.display = "block";
+    document.getElementById("m_id").textContent = member.id;
+    document.getElementById("m_name").textContent = member.name;
+    document.getElementById("m_point").textContent = member.point;
+}
+
+function clearMember() {
+    member = null;
+    document.getElementById("memberInfo").style.display = "none";
+}
+
+
+// ------------------------------------------------------------
+// 商品追加（読み取り or 手入力）
+// ------------------------------------------------------------
+function addProductFromInput() {
+    const code = document.getElementById("productCode").value;
+    if (!code) return;
+    addProductByCode(code);
+    document.getElementById("productCode").value = "";
+}
+
+function addProductByCode(code) {
+    fetch(API + "?mode=getProduct&code=" + code)
+        .then(r => r.json())
+        .then(p => {
+            if (p.error) {
+                alert("商品が見つかりません");
+                return;
+            }
+
+            addToCart(p);
+        });
+}
+
+function addToCart(product) {
+    cart.push(product);
+    renderCart();
+}
+
+function renderCart() {
+    let html = "";
+    let total = 0;
+
+    cart.forEach((p, i) => {
+        total += Number(p.price);
+        html += `
+            <div class="item">
+                <span>${p.name} (${p.code})</span>
+                <span>${p.price}円</span>
+                <button onclick="removeItem(${i})">削除</button>
+            </div>
+        `;
+    });
+
+    document.getElementById("cartList").innerHTML = html;
+    document.getElementById("totalPrice").textContent = total;
+}
+
+function removeItem(i) {
+    cart.splice(i, 1);
+    renderCart();
+}
+
+
+// ------------------------------------------------------------
+// 会計
+// ------------------------------------------------------------
+function checkout() {
+    if (cart.length === 0) {
+        alert("カートが空です");
+        return;
+    }
+
+    const total = document.getElementById("totalPrice").textContent;
+
+    const payload = {
+        mode: "addOrder",
+        member: member ? member.id : "",
+        total: total,
+        items: JSON.stringify(cart)
+    };
+
+    fetch(API, {
+        method: "POST",
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.text())
+    .then(res => {
+        alert("注文を送信しました\n注文ID: " + res);
+        cart = [];
+        renderCart();
+    });
+}
+</script>
 
 </body>
 </html>
+
