@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>会員カード</title>
+<link rel="stylesheet" href="style.css">
+
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<script src="app.js"></script>
+
+<style>
+body { padding:20px; text-align:center; }
+.card {
+    width:300px;
+    margin:auto;
+    padding:20px;
+    border:2px solid #333;
+    border-radius:10px;
+}
+button { padding:10px 18px; margin-top:20px; }
+</style>
+</head>
+
+<body>
+
+<h1>会員カード</h1>
+
+<div class="card">
+    <h2 id="c_name"></h2>
+    <p>ID：<span id="c_id"></span></p>
+
+    <svg id="barcode"></svg>
+</div>
+
+<button onclick="window.print()">印刷</button>
+
+<script>
+const m = JSON.parse(localStorage.getItem("pos_member"));
+if (!m) {
+    alert("会員データがありません");
+} else {
+    document.getElementById("c_name").textContent = m.name;
+    document.getElementById("c_id").textContent = m.id;
+
+    JsBarcode("#barcode", m.id, {
+        format: "CODE128",
+        width: 2,
+        height: 70,
+        displayValue: true
+    });
+}
+</script>
+
+</body>
+</html>
