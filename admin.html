@@ -1,32 +1,31 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>管理画面</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="app.js" defer></script>
+<meta charset="UTF-8">
+<title>管理メニュー</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.menu a {
+    display:block;
+    padding:12px;
+    margin:8px 0;
+    background:#eee;
+    border-radius:8px;
+    text-decoration:none;
+    font-size:18px;
+}
+</style>
 </head>
 <body>
 
-<header>
-  <h1>管理画面</h1>
-  <a href="index.html">POS画面へ</a>
-</header>
+<h1>管理メニュー</h1>
 
-<section>
-  <h2>会員一覧</h2>
-  <div id="memberList"></div>
-</section>
-
-<section>
-  <h2>商品一覧</h2>
-  <div id="adminProductList"></div>
-</section>
-
-<section>
-  <h2>注文一覧</h2>
-  <div id="orderList"></div>
-</section>
+<div class="menu">
+    <a href="admin_members.html">会員管理</a>
+    <a href="admin_products.html">商品管理</a>
+    <a href="admin_orders.html">注文管理</a>
+    <a href="index.html">POS 画面へ</a>
+</div>
 
 </body>
 </html>
